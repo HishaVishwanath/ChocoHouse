@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingredient Inventory</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* CSS for smaller buttons */
+        .small-button {
+            padding: 5px 10px; 
+            font-size: 12px; 
+            width: 100px; 
+            margin-left: 5px; 
+            cursor: pointer; 
+        }
+
+        /* Flexbox for aligning items */
+        .ingredient-item {
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 10px; 
+        }
+
+        .ingredient-text {
+            flex-grow: 1;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgb(0,0,0); 
+            background-color: rgba(0,0,0,0.4); 
+            padding-top: 60px; 
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; 
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ingredient Inventory</h1>
+
+    {% if ingredients %}
+        <ul>
+            {% set displayed_ingredients = [] %}  <!-- Set to keep track of displayed ingredients -->
+            {% for ingredient in ingredients %}
+                {% if ingredient['ingredient_name'] not in displayed_ingredients %}
+                    <li class="ingredient-item">
+                        <span class="ingredient-text">
+                            {{ ingredient['ingredient_name'] }} - Quantity: {{ ingredient['quantity'] }}
+                        </span>
+
+                        <!-- Edit form for each ingredient -->
+                        <form class="editForm" data-ingredient-name="{{ ingredient['ingredient_name'] }}" style="display: inline;">
+                            <input type="number" name="quantity" placeholder="New Quantity" required>
+                            <button type="submit" class="small-button">Update Quantity</button>
+                        </form>
+
+                        <!-- Delete form for each ingredient -->
+                        <form class="deleteForm" data-ingredient-name="{{ ingredient['ingredient_name'] }}" style="display: inline;">
+                            <input type="hidden" name="ingredient_name" value="{{ ingredient['ingredient_name'] }}">
+                            <button type="button" class="small-button delete-button">Delete</button>
+                        </form>
+                    </li>
+                    {% set displayed_ingredients = displayed_ingredients + [ingredient['ingredient_name']] %} <!-- Update the displayed list -->
+                {% endif %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No ingredients found in the inventory.</p>
+    {% endif %}
+    
+    <a href="/">Back to Home</a>
+
+    <!-- Modal for confirmation -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <p id="modalMessage"></p>
+            <button id="confirmButton">Confirm</button>
+            <button id="cancelButton">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript for handling ingredient updates and deletions
+        const modal = document.getElementById("myModal");
+        const modalMessage = document.getElementById("modalMessage");
+        const confirmButton = document.getElementById("confirmButton");
+        const cancelButton = document.getElementById("cancelButton");
+
+        let currentIngredientName;
+        let currentQuantity;
+        let currentAction; // To track the current action (update or delete)
+
+        // Update ingredient event handling
+        document.querySelectorAll('.editForm').forEach(form => {
+            form.onsubmit = function(e) {
+                e.preventDefault();
+                currentIngredientName = this.getAttribute('data-ingredient-name'); // Get ingredient name from data attribute
+                currentQuantity = this.querySelector('input[name="quantity"]').value; // Get the new quantity
+                modalMessage.textContent = `Are you sure you want to update ${currentIngredientName} to quantity ${currentQuantity}?`;
+                currentAction = 'update'; // Set action to update
+                modal.style.display = "block"; // Show the modal
+            };
+        });
+
+        // Delete ingredient event handling
+        document.querySelectorAll('.deleteForm').forEach(form => {
+            form.querySelector('.delete-button').onclick = function(e) {
+                e.preventDefault();
+                currentIngredientName = this.closest('.deleteForm').querySelector('input[name="ingredient_name"]').value; // Get ingredient name
+                modalMessage.textContent = `Are you sure you want to delete ${currentIngredientName}?`;
+                currentAction = 'delete'; // Set action to delete
+                modal.style.display = "block"; // Show the modal
+            };
+        });
+
+        // Confirm button action
+        confirmButton.onclick = async function() {
+            if (currentAction === 'update') {
+                const response = await fetch('/update_ingredient', {
+                    method: 'POST',
+                    body: new URLSearchParams({ 
+                        ingredient_name: currentIngredientName, 
+                        quantity: currentQuantity 
+                    })
+                });
+                const result = await response.json();
+                alert(result.message || 'Ingredient updated!');
+            } else if (currentAction === 'delete') {
+                const response = await fetch('/delete_ingredient', {
+                    method: 'POST',
+                    body: new URLSearchParams({ 
+                        ingredient_name: currentIngredientName 
+                    })
+                });
+                const result = await response.json();
+                alert(result.message || 'Ingredient deleted!');
+            }
+
+            // Reload the page to see the updated inventory
+            window.location.reload();
+        };
+
+        // Cancel button action
+        cancelButton.onclick = function() {
+            modal.style.display = "none"; // Hide the modal
+        };
+
+        // Close modal when the user clicks on <span> (x)
+        document.getElementById("closeModal").onclick = function() {
+            modal.style.display = "none"; // Hide the modal
+        };
+
+        // Close modal when clicking outside of the modal
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none"; // Hide the modal
+            }
+        };
+    </script>
+</body>
+</html>

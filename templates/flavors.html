@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seasonal Flavors</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* CSS for smaller buttons */
+        .small-button {
+            padding: 5px 10px; 
+            font-size: 12px; 
+            width: 100px; 
+            margin-left: 5px; 
+            cursor: pointer; 
+        }
+
+        /* Flexbox for aligning items */
+        .flavor-item {
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 10px; 
+        }
+
+        .flavor-text {
+            flex-grow: 1;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgb(0,0,0); 
+            background-color: rgba(0,0,0,0.4); 
+            padding-top: 60px; 
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; 
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Seasonal Flavors</h1>
+
+    <ul>
+        {% for flavor in flavors %}
+            <li class="flavor-item">
+                <span class="flavor-text">
+                    {{ flavor['flavor_name'] }} - Availability: {{ flavor['availability'] }} - Season: {{ flavor['season'] }}
+                </span>
+
+                <!-- Update Availability Form -->
+                <form class="availabilityForm" data-flavor-name="{{ flavor['flavor_name'] }}" style="display: inline;">
+                    <input type="text" name="availability_status" placeholder="New Availability Status" required>
+                    <button type="submit" class="small-button">Update</button>
+                </form>
+
+                <!-- Delete Flavor Form -->
+                <form class="deleteForm" data-flavor-name="{{ flavor['flavor_name'] }}" style="display: inline;">
+                    <input type="hidden" name="flavor_name" value="{{ flavor['flavor_name'] }}">
+                    <button type="button" class="small-button delete-button">Delete</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href="/">Back to Home</a>
+
+    <!-- Modal for confirmation -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <p id="modalMessage"></p>
+            <button id="confirmButton">Confirm</button>
+            <button id="cancelButton">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript for handling flavor updates and deletions
+        const modal = document.getElementById("myModal");
+        const modalMessage = document.getElementById("modalMessage");
+        const confirmButton = document.getElementById("confirmButton");
+        const cancelButton = document.getElementById("cancelButton");
+
+        let currentFlavorName;
+        let currentAvailability;
+        let currentAction; // To track the current action (update or delete)
+
+        // Update flavor event handling
+        document.querySelectorAll('.availabilityForm').forEach(form => {
+            form.onsubmit = function(e) {
+                e.preventDefault();
+                currentFlavorName = this.getAttribute('data-flavor-name'); // Get flavor name from data attribute
+                currentAvailability = this.querySelector('input[name="availability_status"]').value; // Get the new availability status
+                modalMessage.textContent = `Are you sure you want to update ${currentFlavorName} to availability ${currentAvailability}?`;
+                currentAction = 'update'; // Set action to update
+                modal.style.display = "block"; // Show the modal
+            };
+        });
+
+        // Delete flavor event handling
+        document.querySelectorAll('.deleteForm').forEach(form => {
+            form.querySelector('.delete-button').onclick = function(e) {
+                e.preventDefault();
+                currentFlavorName = this.closest('.deleteForm').querySelector('input[name="flavor_name"]').value; // Get flavor name
+                modalMessage.textContent = `Are you sure you want to delete ${currentFlavorName}?`;
+                currentAction = 'delete'; // Set action to delete
+                modal.style.display = "block"; // Show the modal
+            };
+        });
+
+        // Confirm button action
+        confirmButton.onclick = async function() {
+            if (currentAction === 'update') {
+                const response = await fetch('/update_availability', {
+                    method: 'POST',
+                    body: new URLSearchParams({ 
+                        flavor_name: currentFlavorName, 
+                        availability_status: currentAvailability 
+                    })
+                });
+                const result = await response.json();
+                alert(result.message || 'Availability updated!');
+            } else if (currentAction === 'delete') {
+                const response = await fetch('/delete_flavor', {
+                    method: 'POST',
+                    body: new URLSearchParams({ 
+                        flavor_name: currentFlavorName 
+                    })
+                });
+                const result = await response.json();
+                alert(result.message || 'Flavor deleted!');
+            }
+
+            // Reload the page to see the updated inventory
+            window.location.reload();
+        };
+
+        // Cancel button action
+        cancelButton.onclick = function() {
+            modal.style.display = "none"; // Hide the modal
+        };
+
+        // Close modal when the user clicks on <span> (x)
+        document.getElementById("closeModal").onclick = function() {
+            modal.style.display = "none"; // Hide the modal
+        };
+
+        // Close modal when clicking outside of the modal
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none"; // Hide the modal
+            }
+        };
+    </script>
+</body>
+</html>
