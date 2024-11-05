@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chocolate House</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Basic modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chocolate House</h1>
+
+    <h2>Add Seasonal Flavor</h2>
+    <form id="flavorForm">
+        <input type="text" name="flavor_name" placeholder="Flavor Name" required>
+        <input type="text" name="availability" placeholder="Availability" required>
+        <input type="text" name="season" placeholder="Season (e.g., Winter, Summer)" required> 
+        <button type="submit">Add Flavor</button>
+    </form>
+    
+    <h2>Add Ingredient</h2>
+    <form id="ingredientForm">
+        <input type="text" name="ingredient_name" placeholder="Ingredient Name" required>
+        <input type="number" name="quantity" placeholder="Quantity(Packets)" required>
+        <button type="submit">Add Ingredient</button>
+    </form>
+
+    <h2>Add Customer Suggestion</h2>
+    <form id="suggestionForm">
+        <input type="text" name="customer_name" placeholder="Customer Name" required>
+        <input type="text" name="flavor_suggestion" placeholder="Flavor Suggestion" required>
+        <input type="text" name="allergy_concerns" placeholder="Allergy Concerns (if any)">
+        <button type="submit">Add Suggestion</button>
+    </form>
+
+    <h2>View Data</h2>
+    <ul>
+        <li><a href="/flavors">View Seasonal Flavors</a></li>
+        <li><a href="/ingredients">View Ingredient Inventory</a></li>
+        <li><a href="/suggestions">View Customer Suggestions</a></li>
+    </ul>
+
+    <!-- Modal for confirmation message (buttons) -->
+    <div id="confirmationModal" class="modal">
+        <p id="modalMessage">Message goes here</p>
+        <div class="modal-buttons">
+            <button id="okButton">OK</button>
+            <button id="cancelButton">Cancel</button>
+        </div>
+    </div>
+    <div id="modalOverlay" class="modal-overlay"></div>
+
+    <script>
+        // Function to show the modal
+        function showModal(message, onConfirm) {
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('confirmationModal').style.display = 'block';
+            document.getElementById('modalOverlay').style.display = 'block';
+
+            document.getElementById('okButton').onclick = function() {
+                closeModal();
+                if (onConfirm) {
+                    onConfirm(); // Proceed with submission or action only on OK
+                }
+            };
+
+            document.getElementById('cancelButton').onclick = function() {
+                closeModal(); // Just close the modal without any action if cancel is pressed
+            };
+        }
+
+        // Function to close the modal
+        function closeModal() {
+            document.getElementById('confirmationModal').style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        // JavaScript for flavor form submission with confirmation
+        document.getElementById('flavorForm').onsubmit = async function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(this);
+            const modalMessage = `Are you sure you want to add this flavor?`;
+
+            // Show confirmation modal
+            showModal(modalMessage, async function() {
+                const response = await fetch('/add_flavor', { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message || 'Flavor added!'); // Notify user of result
+                window.location.reload(); // Reload to show updated flavors
+            });
+        };
+
+        // JavaScript for ingredient form submission with confirmation
+        document.getElementById('ingredientForm').onsubmit = async function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(this);
+            const modalMessage = `Are you sure you want to add this ingredient?`;
+
+            // Show confirmation modal
+            showModal(modalMessage, async function() {
+                const response = await fetch('/add_ingredient', { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message || 'Ingredient added!'); // Notify user of result
+                window.location.reload(); // Reload to show updated ingredients
+            });
+        };
+
+        // JavaScript for suggestion form submission with confirmation
+        document.getElementById('suggestionForm').onsubmit = async function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(this);
+            const modalMessage = `Are you sure you want to add this suggestion?`;
+
+            // Show confirmation modal
+            showModal(modalMessage, async function() {
+                const response = await fetch('/add_suggestion', { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message || 'Suggestion added!'); // Notify user of result
+                window.location.reload(); // Reload to show updated suggestions
+            });
+        };
+    </script>
+</body>
+</html>
